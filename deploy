@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+mvn-install
+cp -p ./target/*.jar ~/bin/
