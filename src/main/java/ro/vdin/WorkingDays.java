@@ -32,7 +32,7 @@ public class WorkingDays {
 //            throw new IllegalArgumentException("Year must be at least 2000");
 //        }
 
-        Month month = Month.valueOf(args[0]);
+        Month month = getMonth(args[0]);
 
         FormatMode formatMode = FormatMode.valueOf(args[1]);
         WorkingDayMode workingDayMode = WorkingDayMode.valueOf(args[2]);
@@ -40,6 +40,14 @@ public class WorkingDays {
         var wd = new WorkingDays();
 
         wd.printDays(year, month, formatMode, workingDayMode);
+    }
+
+    private static Month getMonth(String arg) {
+        if (arg.equalsIgnoreCase("CURRENT")) {
+            return LocalDate.now().getMonth();
+        }
+
+        return Month.valueOf(arg);
     }
 
     private static void usage() {
@@ -60,11 +68,11 @@ public class WorkingDays {
 
             switch (mode) {
                 case RO_AGENDA:
-                    System.out.printf("%s, %d %s%s\n",
+                    System.out.printf("%s, %d %s %s\n",
                                       dayOfWeekToRomanian(ld.getDayOfWeek()),
                                       ld.getDayOfMonth(),
                                       monthToRomanian(ld.getMonth()),
-                                      (ld.getDayOfMonth() == 1) ? " " + ld.getYear() : "");
+                                      ld.getYear());
                     System.out.println();
                     break;
                 case EN_AGENDA:
@@ -85,8 +93,34 @@ public class WorkingDays {
     }
 
     private String monthToRomanian(Month month) {
-        var firstLetters = month.name().substring(0, 3);
-        return poormanCamelCase(firstLetters);
+        switch (month) {
+            case JANUARY:
+                return "Ian";
+            case FEBRUARY:
+                return "Feb";
+            case MARCH:
+                return "Mar";
+            case APRIL:
+                return "Apr";
+            case MAY:
+                return "Mai";
+            case JUNE:
+                return "Iun";
+            case JULY:
+                return "Iul";
+            case AUGUST:
+                return "Aug";
+            case SEPTEMBER:
+                return "Sep";
+            case OCTOBER:
+                return "Oct";
+            case NOVEMBER:
+                return "Noi";
+            case DECEMBER:
+                return "Dec";
+        }
+
+        throw new IllegalArgumentException();
     }
 
     private String poormanCamelCase(String str) {
