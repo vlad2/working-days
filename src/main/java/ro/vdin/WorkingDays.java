@@ -1,13 +1,21 @@
 package ro.vdin;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
-import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class WorkingDays {
     private enum FormatMode {
@@ -21,25 +29,80 @@ public class WorkingDays {
         ALL_DAYS
     }
 
+    private record Params(int year, Month month, FormatMode formatMode, WorkingDayMode workingDayMode) {
+    }
+
     public static void main(String[] args) {
-        if (args.length != 3) {
-            usage();
+        try {
+            Params params = readCommandLine(args);
+            var wd = new WorkingDays();
+
+            wd.printDays(params.year, params.month, params.formatMode, params.workingDayMode);
+        } catch (RuntimeException e) {
+            if (e.getCause() != null && e.getCause() instanceof ParseException) {
+                // do nothing
+            } else {
+                throw e;
+            }
         }
 
-        int year = LocalDate.now().getYear();
-//        int year = Integer.parseInt(args[0]);
-//        if (year < 2000) {
-//            throw new IllegalArgumentException("Year must be at least 2000");
-//        }
+    }
 
-        Month month = getMonth(args[0]);
+    private static Params readCommandLine(String[] args) {
+        Options options = new Options();
 
-        FormatMode formatMode = FormatMode.valueOf(args[1]);
-        WorkingDayMode workingDayMode = WorkingDayMode.valueOf(args[2]);
+        options.addOption(new Option("y", "year", true, "year"));
+        options.addOption(new Option("m", "month", true, "month - ex: DECEMBER"));
+        options.addOption(new Option("f",
+                                     "format-mode",
+                                     true,
+                                     "format mode - " + Stream.of(FormatMode.values())
+                                             .map(Enum::name)
+                                             .collect(Collectors.joining("|"))));
+        options.addOption(new Option("w",
+                                     "working-day-mode",
+                                     true,
+                                     Stream.of(WorkingDayMode.values())
+                                             .map(Enum::name)
+                                             .collect(Collectors.joining("|"))));
 
-        var wd = new WorkingDays();
+        CommandLine cmd;
 
-        wd.printDays(year, month, formatMode, workingDayMode);
+        try {
+            CommandLineParser parser = new DefaultParser();
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp("utility-name", options);
+            throw new RuntimeException(e);
+        }
+
+        String yearStr = cmd.getOptionValue("y");
+        int year;
+        if (yearStr != null) {
+            year = Integer.parseInt(yearStr);
+            if (year < 2000) {
+                throw new IllegalArgumentException("Year must be at least 2000");
+            }
+        } else {
+            year = LocalDate.now().getYear();
+        }
+
+        Month month;
+        if (cmd.getOptionValue("m") != null) {
+            month = getMonth(cmd.getOptionValue("m"));
+        } else {
+            month = LocalDate.now().getMonth();
+        }
+
+        FormatMode formatMode =
+                cmd.getOptionValue("f") != null ? FormatMode.valueOf(cmd.getOptionValue("f")) : FormatMode.YYYY;
+        WorkingDayMode workingDayMode =
+                cmd.getOptionValue("w") != null ? WorkingDayMode.valueOf(cmd.getOptionValue("w")) :
+                        WorkingDayMode.ALL_DAYS;
+
+        return new Params(year, month, formatMode, workingDayMode);
     }
 
     private static Month getMonth(String arg) {
@@ -48,14 +111,6 @@ public class WorkingDays {
         }
 
         return Month.valueOf(arg);
-    }
-
-    private static void usage() {
-        System.out.printf("Usage example: working-days <MONTH> <%s> <%s>\n",
-                          List.of(FormatMode.values()).stream().map(x -> x.name()).collect(Collectors.joining("|")),
-                          List.of(WorkingDayMode.values()).stream().map(x -> x.name()).collect(Collectors.joining("|"))
-        );
-        System.exit(1);
     }
 
     private void printDays(int year, Month month, FormatMode mode, WorkingDayMode workingDayMode) {
@@ -93,59 +148,37 @@ public class WorkingDays {
     }
 
     private String monthToRomanian(Month month) {
-        switch (month) {
-            case JANUARY:
-                return "Ian";
-            case FEBRUARY:
-                return "Feb";
-            case MARCH:
-                return "Mar";
-            case APRIL:
-                return "Apr";
-            case MAY:
-                return "Mai";
-            case JUNE:
-                return "Iun";
-            case JULY:
-                return "Iul";
-            case AUGUST:
-                return "Aug";
-            case SEPTEMBER:
-                return "Sep";
-            case OCTOBER:
-                return "Oct";
-            case NOVEMBER:
-                return "Noi";
-            case DECEMBER:
-                return "Dec";
-        }
+        return switch (month) {
+            case JANUARY -> "Ian";
+            case FEBRUARY -> "Feb";
+            case MARCH -> "Mar";
+            case APRIL -> "Apr";
+            case MAY -> "Mai";
+            case JUNE -> "Iun";
+            case JULY -> "Iul";
+            case AUGUST -> "Aug";
+            case SEPTEMBER -> "Sep";
+            case OCTOBER -> "Oct";
+            case NOVEMBER -> "Noi";
+            case DECEMBER -> "Dec";
+        };
 
-        throw new IllegalArgumentException();
     }
 
-    private String poormanCamelCase(String str) {
-        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
-    }
+//    private String poormanCamelCase(String str) {
+//        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
+//    }
 
     private String dayOfWeekToRomanian(DayOfWeek dayOfWeek) {
-        switch (dayOfWeek) {
-            case MONDAY:
-                return "Luni";
-            case TUESDAY:
-                return "Marți";
-            case WEDNESDAY:
-                return "Miercuri";
-            case THURSDAY:
-                return "Joi";
-            case FRIDAY:
-                return "Vineri";
-            case SATURDAY:
-                return "Sâmbătă";
-            case SUNDAY:
-                return "Duminică";
-            default:
-                throw new IllegalArgumentException("Unsupported value " + dayOfWeek);
-        }
+        return switch (dayOfWeek) {
+            case MONDAY -> "Luni";
+            case TUESDAY -> "Marți";
+            case WEDNESDAY -> "Miercuri";
+            case THURSDAY -> "Joi";
+            case FRIDAY -> "Vineri";
+            case SATURDAY -> "Sâmbătă";
+            case SUNDAY -> "Duminică";
+        };
     }
 
     private int daysInMonth(int year, Month month) {
@@ -153,12 +186,9 @@ public class WorkingDays {
     }
 
     private boolean isWeekend(LocalDate ld) {
-        switch (ld.getDayOfWeek()) {
-            case SATURDAY:
-            case SUNDAY:
-                return true;
-            default:
-                return false;
-        }
+        return switch (ld.getDayOfWeek()) {
+            case SATURDAY, SUNDAY -> true;
+            default -> false;
+        };
     }
 }
