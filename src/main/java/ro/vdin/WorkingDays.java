@@ -59,12 +59,14 @@ public class WorkingDays {
                                      "format mode - " + Stream.of(FormatMode.values())
                                              .map(Enum::name)
                                              .collect(Collectors.joining("|"))));
-        options.addOption(new Option("w",
-                                     "working-day-mode",
-                                     true,
-                                     Stream.of(WorkingDayMode.values())
-                                             .map(Enum::name)
-                                             .collect(Collectors.joining("|"))));
+        Option wOption = new Option("w",
+                                    "working-day-mode",
+                                    true,
+                                    Stream.of(WorkingDayMode.values())
+                                            .map(Enum::name)
+                                            .collect(Collectors.joining("|")));
+        wOption.setRequired(true);
+        options.addOption(wOption);
 
         CommandLine cmd;
 
@@ -73,8 +75,7 @@ public class WorkingDays {
             cmd = parser.parse(options, args);
         } catch (ParseException e) {
             System.out.println(e.getMessage());
-            HelpFormatter formatter = new HelpFormatter();
-            formatter.printHelp("utility-name", options);
+            usage(options);
             throw new RuntimeException(e);
         }
 
@@ -98,11 +99,14 @@ public class WorkingDays {
 
         FormatMode formatMode =
                 cmd.getOptionValue("f") != null ? FormatMode.valueOf(cmd.getOptionValue("f")) : FormatMode.YYYY;
-        WorkingDayMode workingDayMode =
-                cmd.getOptionValue("w") != null ? WorkingDayMode.valueOf(cmd.getOptionValue("w")) :
-                        WorkingDayMode.ALL_DAYS;
+        WorkingDayMode workingDayMode = WorkingDayMode.valueOf(cmd.getOptionValue("w"));
 
         return new Params(year, month, formatMode, workingDayMode);
+    }
+
+    private static void usage(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.printHelp("utility-name", options);
     }
 
     private static Month getMonth(String arg) {
